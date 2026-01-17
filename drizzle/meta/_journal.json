@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1768655143252,
+      "tag": "0000_secret_zuras",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1768667102212,
+      "tag": "0001_lush_steel_serpent",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1768667585272,
+      "tag": "0002_unusual_tarantula",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1768669030909,
+      "tag": "0003_uneven_tyrannus",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1768670158034,
+      "tag": "0004_watery_reptil",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1768671191076,
+      "tag": "0005_silent_lyja",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1768673004021,
+      "tag": "0006_nostalgic_thor_girl",
+      "breakpoints": true
+    }
+  ]
+}

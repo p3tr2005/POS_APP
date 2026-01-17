@@ -1,0 +1,1 @@
+ALTER TABLE `user` ADD `role` varchar(50) DEFAULT 'cashier' NOT NULL;
