@@ -1,57 +1,49 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { auth } from '@/auth';
+import { db } from '@/database';
+import { user } from '@/database/models';
 import { BetterAuthError } from 'better-auth';
+import { eq } from 'drizzle-orm';
 import { flatten, safeParse } from 'valibot';
 
 import { DEFAULT_AUTH_REDIRECT } from '@/utils/constants';
 import { SignInFormSchema, SignUpFormSchema } from '@/utils/validators/auth.validator';
 
 export async function SignUpFn(_: unknown, formData: FormData) {
-  console.log('[INFO]: sign up - HIT.');
-
   const payload = Object.fromEntries(formData);
-
-  // 1. validating input.
   const { output: values, success, issues } = safeParse(SignUpFormSchema, payload);
 
-  console.log('[INFO]: ', values);
-
   if (!success) {
-    console.log('[ERROR]: validation error.');
-
-    return {
-      status: 'error',
-      error: flatten(issues).nested,
-    };
+    return { status: 'error', error: flatten(issues).nested };
   }
 
-  // 2. sign up
   try {
-    console.log('[INFO]: creating account...');
-
+    // Gunakan await untuk memastikan proses selesai
     const resp = await auth.api.signUpEmail({
-      body: { ...values, name: values.username, rememberMe: true, callbackURL: '/auth/sign-in' },
+      body: {
+        email: values.email,
+        password: values.password,
+        name: values.username, // Gunakan values.name sesuai input form
+      },
     });
 
-    console.log('[INFO]: account created.');
-
-    console.log(resp);
-
-    return { status: 'success' };
-  } catch (err) {
-    if (err instanceof BetterAuthError) {
-      console.log('[ERROR]: Better-auth error');
-      console.log(err);
+    // Jika resp ada, berarti berhasil
+    if (resp) {
+      return { status: 'success' };
+    }
+  } catch (err: any) {
+    // Cek jika user sudah ada (Error 422 atau email-already-exists)
+    if (err.status === 422 || err.body?.code === 'USER_ALREADY_EXISTS') {
+      return { status: 'error', error: 'Email already registered.' };
     }
 
-    return {
-      status: 'error',
-      error: 'Something went wrong, try again.',
-    };
+    console.error('[AUTH_ERROR]:', err);
+    return { status: 'error', error: 'Failed to create account.' };
   }
 }
 
@@ -106,4 +98,24 @@ export async function logoutAction() {
     headers: await headers(),
   });
   redirect(DEFAULT_AUTH_REDIRECT);
+}
+
+export async function updateUserRole(
+  targetUserId: string,
+  newRole: 'ADMIN' | 'CASHIER' | 'KITCHEN'
+) {
+  // 1. Cek apakah pengubah adalah Admin
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session || session.user.role !== 'ADMIN') {
+    throw new Error('UNAUTHORIZED_ACTION');
+  }
+
+  // 2. Update role di database
+  await db.update(user).set({ role: newRole }).where(eq(user.id, targetUserId));
+
+  // 3. Refresh data di halaman tersebut
+  revalidatePath('/dashboard/users');
+
+  return { success: true };
 }

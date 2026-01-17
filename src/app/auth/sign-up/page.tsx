@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { SignUpFn } from '@/app/actions/auth.action';
 // Pastikan action ini ada
-import { ArrowRight, UserPlus, Zap } from 'lucide-react';
+import { UserPlus, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { getFieldError } from '@/utils/fn';
@@ -76,7 +76,7 @@ export default function SignUpPage() {
               </label>
               <input
                 id="name"
-                name="name"
+                name="username"
                 type="text"
                 required
                 placeholder="YOUR NAME"

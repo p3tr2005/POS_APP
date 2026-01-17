@@ -6,7 +6,7 @@ import { productModel } from '.';
 export const user = mysqlTable('user', {
   id: varchar('id', { length: 36 }).primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
-  role: varchar('role', { length: 50 }).notNull().default('cashier'),
+  role: text('role').$type<'ADMIN' | 'CASHIER' | 'KITCHEN'>().default('CASHIER'),
   email: varchar('email', { length: 255 }).notNull().unique(),
   emailVerified: boolean('email_verified').default(false).notNull(),
   image: text('image'),

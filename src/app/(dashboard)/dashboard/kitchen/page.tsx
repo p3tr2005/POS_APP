@@ -4,6 +4,9 @@ import { desc, eq } from 'drizzle-orm';
 
 import KitchenCard from './kitchen-card';
 
+export const dynamic = 'force-dynamic'; // Paksa Next.js untuk tidak men-cache halaman ini
+export const revalidate = 0; // Pastikan data diambil setiap kali request datang
+
 export default async function KitchenPage() {
   // Ambil pesanan yang belum selesai (Pending atau sedang diproses)
   const incomingOrders = await db.query.orders.findMany({

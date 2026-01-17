@@ -1,14 +1,21 @@
 // src/app/(dashboard)/layout.tsx
+import { headers } from 'next/headers';
+
+import { auth } from '@/auth';
 import Sidebar from '@/ui/components/sidebar';
 
 // Pastikan pathnya benar
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
   return (
     <div className="flex min-h-screen bg-white">
       {/* SIDEBAR: Tetap di kiri, lebar 72 (sekitar 280px) */}
       <aside className="fixed inset-y-0 left-0 z-50 w-72">
-        <Sidebar />
+        <Sidebar user={session?.user} />
       </aside>
 
       {/* MAIN CONTENT: Berikan margin-left sebesar lebar sidebar */}

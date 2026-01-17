@@ -6,12 +6,14 @@
     "dev": "bun --bun run next dev",
     "build": "bun --bun next build",
     "start": "bun --bun run next start",
+    "build:new": "next build && cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/",
     "component:add": "bunx --bun shadcn@latest add ",
     "lint": "eslint",
     "format": "prettier --write .",
     "db:gen": "bunx --bun drizzle-kit generate",
     "db:migrate": "bunx --bun drizzle-kit migrate",
     "db:studio": "bunx --bun drizzle-kit studio",
+    "db:seed": "bun run src/database/seed.ts",
     "auth:gen": "bunx @better-auth/cli@latest generate --output ./src/database/models/auth.model.ts --config=./src/auth"
   },
   "dependencies": {
