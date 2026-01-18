@@ -33,7 +33,7 @@ export default function MenuClient({ products }: { products: any[] }) {
             <div className="border-2 border-black bg-black p-2 text-white">
               <UtensilsCrossed size={24} />
             </div>
-            <h1 className="text-3xl font-[1000] tracking-tighter uppercase italic">BOBA_GACOR</h1>
+            <h1 className="text-3xl font-[1000] tracking-tighter uppercase italic">KEDAI DANKJE</h1>
           </div>
           <div className="relative w-full md:w-96">
             <input
