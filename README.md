@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🧋 BOBA_GACOR_POS (V2.0)
 
-## Getting Started
+> **STATUS:** PRODUCTION_READY // **STYLE:** NEO-BRUTALISM
 
-First, run the development server:
+Sistem Kasir (POS) dan Self-Service Menu untuk kedai Boba modern. Dibangun dengan fokus pada kecepatan transaksi, interaksi interaktif, dan notifikasi suara real-time.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## ⚡ TECH_STACK
+
+- **Framework:** Next.js 16 (App Router + Proxy Middleware)
+- **Database:** MySQL (via Drizzle ORM)
+- **Styling:** Tailwind CSS (Neo-Brutalism Design)
+- **State Management:** Zustand (Cart System)
+- **Icons & Audio:** Lucide React + HTML5 Audio API
+- **Real-time:** Polling System via Client Components
+
+## 🛠️ KEY_FEATURES
+
+### 1. CUSTOMER_INTERFACE (/menu/public)
+
+- **Dynamic Catalog:** Menampilkan produk dari database.
+- **Modifier System:** Kustomisasi gula, es, dan topping dengan modal interaktif.
+- **Neo-Checkout:** Review pesanan dengan gaya visual yang berani.
+- **Live Tracker:** Halaman status pesanan (`/order-status/[id]`) yang dilengkapi getar HP (Vibration API) dan notifikasi suara saat pesanan siap.
+
+### 2. DASHBOARD_KASIR (/dashboard)
+
+- **Live Order Feed:** Pantau pesanan masuk secara real-time.
+- **Smart Audio Alert:** Dashboard akan bunyi "DING" hanya saat ada pesanan baru masuk (Memory-locked ID).
+- **Order Management:** Ubah status pesanan (Process -> Ready -> Complete) atau Void/Cancel pesanan jika terjadi kesalahan.
+
+### 3. BACKEND_LOGIC (Server Actions)
+
+- **Atomic Transactions:** Menjamin data `orders` dan `orderItems` tersimpan secara utuh atau tidak sama sekali.
+- **Middleware Proxy:** Melindungi rute dashboard admin namun tetap membuka akses publik untuk menu belanja.
+
+---
+
+## 🚀 INSTALLATION
+
+1. **Clone & Install:**
+   ```bash
+   git clone [https://github.com/username/boba-gacor.git](https://github.com/p3tr2005/pos_app.git)
+   cd boba-gacor
+   npm install
+   ```
+
+## ENV
+
+```env
+DATABASE_URL=
+BETTER_AUTH_SECRET=
+BETTER_AUTH_URL=http://localhost:3000 # Base URL of your app
+NEXT_PUBLIC_HOST=
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

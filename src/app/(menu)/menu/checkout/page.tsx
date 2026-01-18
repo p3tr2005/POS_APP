@@ -24,7 +24,7 @@ export default function CheckoutPage() {
     startTransition(async () => {
       const res = await createPublicOrderAction(cart);
 
-      if (res.success) {
+      if (res && res.success) {
         toast.success('Pesanan berhasil dibuat!');
         clearCart(); // Kosongkan keranjang di Zustand/LocalStorage
         router.push(`/order-status/${res.orderId}`); // Langsung lari ke status
