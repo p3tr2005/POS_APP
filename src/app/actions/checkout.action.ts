@@ -16,40 +16,44 @@ export type CartItem = {
   qty: number;
 };
 
-export async function processCheckoutAction(cart: CartItem[]) {
+export async function processCheckoutAction(cart: any[]) {
   const session = await auth.api.getSession({ headers: await headers() });
-
-  if (!session) return { error: 'NOT AUTHORIZED' };
-  if (cart.length === 0) return { error: 'CART IS EMPTY' };
-
-  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  if (!session) return { success: false, error: 'UNAUTHORIZED' };
 
   try {
-    // 1. Simpan Order Utama
-    const [newOrder] = await db
-      .insert(orders)
-      .values({
+    const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+
+    return await db.transaction(async (tx) => {
+      // 1. Buat Header Order
+      const [newOrder] = await tx.insert(orders).values({
         userId: session.user.id,
-        totalPrice: totalPrice,
-      })
-      .$returningId();
+        totalPrice: total,
+        status: 'PENDING',
+      });
 
-    // 2. Simpan Detail Item (Tambahkan productTitle di sini)
-    const itemsToInsert = cart.map((item) => ({
-      orderId: newOrder.id,
-      productId: item.id,
-      productTitle: item.title, // TAMBAHKAN INI agar tidak error
-      quantity: item.qty,
-      priceAtPointOfSale: item.price,
-    }));
+      const orderId = (
+        await tx.query.orders.findFirst({
+          orderBy: (o, { desc }) => [desc(o.createdAt)],
+        })
+      )?.id;
 
-    await db.insert(orderItems).values(itemsToInsert);
+      // 2. Masukkan Item Keranjang
+      for (const item of cart) {
+        await tx.insert(orderItems).values({
+          orderId: orderId!,
+          productId: item.id,
+          productTitle: item.title, // TAMBAHKAN INI (Sesuai skema kamu)
+          quantity: item.qty,
+          priceAtPointOfSale: item.price, // UBAH INI (Tadinya priceAtOrder)
+          modifiers: item.modifiers || [],
+          notes: item.notes || '',
+        });
+      }
 
-    revalidatePath('/dashboard/pos');
-    return { success: true, orderId: newOrder.id };
-  } catch (e) {
-    console.error(e);
-    return { error: 'TRANSACTION FAILED' };
+      return { success: true };
+    });
+  } catch (err) {
+    return { success: false, error: 'DATABASE_ERROR' };
   }
 }
 

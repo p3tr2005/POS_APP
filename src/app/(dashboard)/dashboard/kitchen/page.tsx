@@ -1,54 +1,60 @@
+import { markOrderAsReadyAction } from '@/app/actions/kitchen.action';
 import { db } from '@/database';
-import { orders } from '@/database/models/product.model';
-import { desc, eq } from 'drizzle-orm';
+import { orders } from '@/database/models';
+import { asc, eq } from 'drizzle-orm';
 
-import KitchenCard from './kitchen-card';
-
-export const dynamic = 'force-dynamic'; // Paksa Next.js untuk tidak men-cache halaman ini
-export const revalidate = 0; // Pastikan data diambil setiap kali request datang
+import OrderCard from './order-card';
 
 export default async function KitchenPage() {
-  // Ambil pesanan yang belum selesai (Pending atau sedang diproses)
-  const incomingOrders = await db.query.orders.findMany({
+  const activeOrders = await db.query.orders.findMany({
     where: eq(orders.status, 'PENDING'),
     with: {
-      items: true, // Sekarang ini pasti akan mengembalikan array, bukan undefined
+      items: {
+        with: {
+          product: true,
+        },
+      },
     },
-    orderBy: [desc(orders.createdAt)],
+    orderBy: [asc(orders.createdAt)],
   });
 
+  // Server Action Bridge
+  const handleOrderComplete = async (id: string) => {
+    'use server';
+    await markOrderAsReadyAction(id);
+  };
+
   return (
-    <div className="space-y-12">
-      {/* HEADER KDS */}
-      <div className="flex items-center justify-between border-b-[10px] border-black pb-8">
-        <div>
-          <h2 className="text-8xl leading-none font-black tracking-tighter uppercase italic">
-            Kitchen
-          </h2>
-          <p className="mt-2 text-xs font-black tracking-[0.4em] text-zinc-400 uppercase italic">
-            Active_Production_Line
+    <div className="space-y-8">
+      <div className="flex items-end justify-between border-b-[10px] border-black pb-6">
+        <h1 className="text-8xl font-black tracking-tighter uppercase italic">Kitchen</h1>
+        <div className="text-right">
+          <p className="text-xs font-black tracking-widest text-zinc-400">AUTO_REFRESH: ACTIVE</p>
+          <p className="text-2xl font-black text-red-600 uppercase italic">
+            {activeOrders.length} ORDERS_LEFT
           </p>
-        </div>
-        <div className="bg-black p-6 text-2xl font-black text-white italic shadow-[8px_8px_0px_0px_rgba(255,0,0,1)]">
-          {incomingOrders.length} ORDERS_WAITING
         </div>
       </div>
 
-      {/* KITCHEN GRID */}
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-        {incomingOrders.map((order) => (
-          <KitchenCard key={order.id} order={order} />
+      <div className="grid grid-cols-1 gap-10 md:grid-cols-2 xl:grid-cols-3">
+        {activeOrders.map((order) => (
+          <OrderCard
+            key={order.id}
+            id={order.id}
+            orderNumber={order.id.slice(-4).toUpperCase()}
+            type={order.type ?? 'TAKEAWAY'}
+            tableNumber={order.tableNumber}
+            items={order.items.map((item: any) => ({
+              id: item.id,
+              name: item.product.title,
+              quantity: item.quantity,
+              category: item.product.category,
+              modifiers: item.modifiers,
+              notes: item.notes,
+            }))}
+            onComplete={handleOrderComplete}
+          />
         ))}
-
-        {incomingOrders.length === 0 && (
-          <div className="col-span-full flex items-center justify-center border-8 border-dashed border-zinc-100 py-40">
-            <p className="text-center text-4xl leading-tight font-black tracking-widest text-zinc-200 uppercase italic">
-              No_Orders_In_Queue
-              <br />
-              <span className="text-sm">Kitchen is clear. Rest or Clean up.</span>
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

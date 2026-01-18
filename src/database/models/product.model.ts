@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { int, mysqlTable, timestamp, varchar } from 'drizzle-orm/mysql-core';
+import { int, json, mysqlTable, text, timestamp, varchar } from 'drizzle-orm/mysql-core';
 
 import { user } from './auth.model';
 
@@ -44,6 +44,8 @@ export const orderItems = mysqlTable('order_items', {
   productTitle: varchar('product_title', { length: 255 }).notNull(), // Simpan nama saat dibeli (jika nanti nama produk berubah)
   quantity: int('quantity').notNull(),
   priceAtPointOfSale: int('price_at_pos').notNull(), // Harga saat transaksi (jika nanti harga naik)
+  modifiers: json('modifiers').$type<string[]>(),
+  notes: text('notes'), // Catatan tambahan
 });
 
 export const productRelation = relations(productModel, ({ one }) => ({

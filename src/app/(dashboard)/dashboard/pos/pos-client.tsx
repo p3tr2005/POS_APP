@@ -1,35 +1,53 @@
-// src/app/(dashboard)/pos/POSClient.tsx
 'use client';
 
 import { useState, useTransition } from 'react';
 
 import { processCheckoutAction } from '@/app/actions/checkout.action';
-import { Minus, Plus, Search, ShoppingBag, Trash2, Utensils } from 'lucide-react';
+import { Dialog } from '@/ui/components/dialog';
+import { Minus, Plus, Search, ShoppingBag, Trash2, Utensils, X } from 'lucide-react';
+import { toast } from 'sonner';
+
+import ModifierModal from './modifier-modal';
 
 export default function POSClient({ initialProducts }: { initialProducts: any[] }) {
   const [cart, setCart] = useState<any[]>([]);
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
-  // Logic Tambah/Kurang Keranjang
-  const addToCart = (product: any) => {
+  // 1. Logic Tambah ke Keranjang (Setelah Customization)
+  const handleConfirmCustomization = (customData: { modifiers: string[]; notes: string }) => {
+    const cartId = `${selectedProduct.id}-${customData.modifiers.sort().join('-')}`;
+
     setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
+      const existing = prev.find((item) => item.cartId === cartId);
       if (existing) {
-        return prev.map((item) => (item.id === product.id ? { ...item, qty: item.qty + 1 } : item));
+        return prev.map((item) => (item.cartId === cartId ? { ...item, qty: item.qty + 1 } : item));
       }
-      return [...prev, { ...product, qty: 1 }];
+      return [
+        ...prev,
+        {
+          ...selectedProduct,
+          cartId,
+          qty: 1,
+          modifiers: customData.modifiers,
+          notes: customData.notes,
+        },
+      ];
     });
+
+    setSelectedProduct(null);
+    toast.success(`${selectedProduct.title} ditambahkan!`);
   };
 
-  const removeFromCart = (id: string) => {
-    setCart((prev) => prev.filter((item) => item.id !== id));
+  const removeFromCart = (cartId: string) => {
+    setCart((prev) => prev.filter((item) => item.cartId !== cartId));
   };
 
-  const updateQty = (id: string, delta: number) => {
+  const updateQty = (cartId: string, delta: number) => {
     setCart((prev) =>
       prev.map((item) => {
-        if (item.id === id) {
+        if (item.cartId === cartId) {
           const newQty = item.qty + delta;
           return newQty > 0 ? { ...item, qty: newQty } : item;
         }
@@ -38,17 +56,17 @@ export default function POSClient({ initialProducts }: { initialProducts: any[] 
     );
   };
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const total = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
     startTransition(async () => {
       const res = await processCheckoutAction(cart);
       if (res.success) {
-        alert('TRANSACTION COMPLETED');
+        toast.success('TRANSACTION_COMPLETED_GACOR!');
         setCart([]);
       } else {
-        alert(res.error);
+        toast.error(res.error || 'CHECKOUT_FAILED');
       }
     });
   };
@@ -58,38 +76,52 @@ export default function POSClient({ initialProducts }: { initialProducts: any[] 
   );
 
   return (
-    <div className="flex h-full gap-0 border-t-4 border-black">
-      {/* KIRI: MENU GRID */}
-      <div className="flex-1 overflow-y-auto bg-[#f3f3f3] p-8">
-        <div className="mb-10 flex items-center justify-between">
-          <h2 className="text-7xl leading-none font-black tracking-tighter uppercase italic">
-            Catalog
-          </h2>
-          <div className="relative w-72 border-4 border-black bg-white">
-            <Search className="absolute top-3 left-3" size={20} />
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-[#f3f3f3]">
+      {/* --- MODAL CUSTOMIZATION (SHADCN) --- */}
+      <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
+        {selectedProduct && (
+          <ModifierModal product={selectedProduct} onConfirm={handleConfirmCustomization} />
+        )}
+      </Dialog>
+
+      {/* --- KIRI: MENU CATALOG --- */}
+      <div className="flex-1 overflow-y-auto border-r-8 border-black p-8">
+        <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div>
+            <h2 className="text-8xl leading-none font-black tracking-tighter uppercase italic">
+              Catalog
+            </h2>
+            <p className="mt-2 text-xs font-black tracking-[0.3em] text-zinc-400">
+              SELECT_ITEMS_TO_START
+            </p>
+          </div>
+          <div className="relative w-full border-[4px] border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] md:w-80">
+            <Search className="absolute top-1/2 left-4 -translate-y-1/2 opacity-30" size={20} />
             <input
               type="text"
-              placeholder="SEARCH MENU..."
-              className="w-full p-3 pl-10 text-xs font-black tracking-widest uppercase outline-none"
+              placeholder="SEARCH_MENU..."
+              className="w-full p-4 pl-12 text-sm font-black tracking-widest uppercase outline-none"
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-6 pb-20 lg:grid-cols-3 xl:grid-cols-4">
           {filteredProducts.map((product) => (
             <button
               key={product.id}
-              onClick={() => addToCart(product)}
-              className="group flex h-48 flex-col justify-between border-4 border-black bg-white p-4 text-left transition-all hover:bg-black hover:text-white"
+              onClick={() => setSelectedProduct(product)}
+              className="group flex h-52 flex-col justify-between border-[4px] border-black bg-white p-6 text-left transition-all hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-x-0 active:translate-y-0 active:shadow-none"
             >
               <div className="flex items-start justify-between">
-                <span className="border border-current px-1 text-[10px] font-black italic">
+                <span className="bg-black px-2 py-1 text-[10px] font-black text-white italic">
                   IDR {Number(product.price).toLocaleString()}
                 </span>
-                <Utensils size={16} className="opacity-20 group-hover:opacity-100" />
+                <div className="border-2 border-black bg-zinc-100 p-2 transition-colors group-hover:bg-yellow-400">
+                  <Utensils size={18} />
+                </div>
               </div>
-              <h4 className="mt-4 text-2xl leading-tight font-black tracking-tighter uppercase italic">
+              <h4 className="text-2xl leading-none font-black tracking-tighter uppercase italic">
                 {product.title}
               </h4>
             </button>
@@ -97,51 +129,71 @@ export default function POSClient({ initialProducts }: { initialProducts: any[] 
         </div>
       </div>
 
-      {/* KANAN: CART / STRUK */}
-      <div className="flex w-[450px] flex-col border-l-8 border-black bg-white">
-        <div className="border-b-4 border-black bg-black p-8 text-white">
-          <div className="flex items-center justify-between">
-            <h3 className="text-3xl font-black tracking-tighter uppercase italic">Current Order</h3>
-            <ShoppingBag size={24} />
+      {/* --- KANAN: CART / SUMMARY --- */}
+      <div className="flex w-[480px] flex-col bg-white">
+        <div className="flex items-center justify-between border-b-8 border-black bg-black p-8 text-white">
+          <h3 className="text-3xl font-black tracking-tighter uppercase italic">Current_Order</h3>
+          <div className="border-2 border-white bg-white px-3 py-1 text-sm font-black text-black">
+            {cart.length}
           </div>
         </div>
 
         <div className="flex-1 space-y-6 overflow-y-auto p-8">
           {cart.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center opacity-20">
-              <ShoppingBag size={64} strokeWidth={1} />
-              <p className="mt-4 font-black tracking-[0.2em] italic">EMPTY_BAG</p>
+            <div className="flex h-full flex-col items-center justify-center opacity-10">
+              <ShoppingBag size={120} strokeWidth={3} />
+              <p className="mt-4 text-2xl font-black tracking-widest italic">EMPTY_BAG</p>
             </div>
           ) : (
             cart.map((item) => (
-              <div key={item.id} className="group border-b-2 border-zinc-100 pb-4">
-                <div className="mb-3 flex items-start justify-between">
-                  <h5 className="text-lg leading-none font-black uppercase italic">{item.title}</h5>
+              <div key={item.cartId} className="group border-b-4 border-black pb-6 last:border-0">
+                <div className="mb-2 flex items-start justify-between">
+                  <h5 className="text-xl leading-none font-black uppercase italic">{item.title}</h5>
                   <button
-                    onClick={() => removeFromCart(item.id)}
-                    className="text-zinc-300 transition-colors hover:text-red-600"
+                    onClick={() => removeFromCart(item.cartId)}
+                    className="p-1 text-zinc-300 transition-colors hover:text-red-600"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={18} />
                   </button>
                 </div>
+
+                {/* MODIFIERS & NOTES */}
+                <div className="mb-3 flex flex-wrap gap-1">
+                  {item.modifiers?.map((m: string) => (
+                    <span
+                      key={m}
+                      className="border border-zinc-300 bg-zinc-100 px-2 py-0.5 text-[9px] font-black text-zinc-500 uppercase italic"
+                    >
+                      {m}
+                    </span>
+                  ))}
+                </div>
+                {item.notes && (
+                  <p className="mb-4 border-l-4 border-red-600 bg-red-50 p-2 text-[11px] font-bold text-red-600 uppercase">
+                    " {item.notes} "
+                  </p>
+                )}
+
                 <div className="flex items-center justify-between">
-                  <div className="flex border-2 border-black">
+                  <div className="flex border-[3px] border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
                     <button
-                      onClick={() => updateQty(item.id, -1)}
-                      className="p-1 transition-all hover:bg-black hover:text-white"
+                      onClick={() => updateQty(item.cartId, -1)}
+                      className="border-r-[3px] border-black p-2 transition-colors hover:bg-black hover:text-white"
                     >
-                      <Minus size={14} />
+                      <Minus size={16} strokeWidth={3} />
                     </button>
-                    <span className="flex items-center bg-zinc-50 px-4 font-black">{item.qty}</span>
+                    <span className="flex items-center bg-zinc-50 px-6 text-lg font-black">
+                      {item.qty}
+                    </span>
                     <button
-                      onClick={() => updateQty(item.id, 1)}
-                      className="p-1 transition-all hover:bg-black hover:text-white"
+                      onClick={() => updateQty(item.cartId, 1)}
+                      className="border-l-[3px] border-black p-2 transition-colors hover:bg-black hover:text-white"
                     >
-                      <Plus size={14} />
+                      <Plus size={16} strokeWidth={3} />
                     </button>
                   </div>
-                  <p className="text-lg font-black italic">
-                    IDR {(item.price * item.qty).toLocaleString()}
+                  <p className="text-xl font-black italic">
+                    IDR {(Number(item.price) * item.qty).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -149,21 +201,29 @@ export default function POSClient({ initialProducts }: { initialProducts: any[] 
           )}
         </div>
 
-        {/* FOOTER TOTAL */}
-        <div className="space-y-6 border-t-8 border-black p-8">
-          <div className="flex items-end justify-between">
-            <span className="text-xs font-black tracking-[0.3em] text-zinc-400">TOTAL_PAYABLE</span>
-            <span className="text-4xl font-black tracking-tighter italic underline decoration-4 underline-offset-4">
-              IDR {total.toLocaleString()}
-            </span>
+        {/* --- FOOTER TOTAL & CHECKOUT --- */}
+        <div className="border-t-8 border-black bg-zinc-50 p-8">
+          <div className="mb-8 flex items-end justify-between">
+            <span className="text-xs font-black tracking-[0.3em] text-zinc-400">GRAND_TOTAL</span>
+            <div className="text-right">
+              <span className="block text-4xl font-black tracking-tighter italic">
+                IDR {total.toLocaleString()}
+              </span>
+            </div>
           </div>
 
           <button
             disabled={cart.length === 0 || isPending}
             onClick={handleCheckout}
-            className="flex w-full items-center justify-center gap-4 bg-black py-6 text-xl font-black tracking-[0.4em] text-white uppercase italic transition-all hover:bg-zinc-800 disabled:bg-zinc-200"
+            className="flex w-full items-center justify-center gap-4 bg-black py-8 text-3xl font-black tracking-tighter text-white uppercase italic shadow-[8px_8px_0px_0px_rgba(34,197,94,1)] transition-all hover:translate-x-1 hover:translate-y-1 hover:shadow-none disabled:translate-x-0 disabled:translate-y-0 disabled:bg-zinc-300 disabled:shadow-none"
           >
-            {isPending ? 'PROCESSING...' : 'PROCESS_CHECKOUT'}
+            {isPending ? (
+              'PROCESSING...'
+            ) : (
+              <>
+                PROCESS_CHECKOUT <Plus size={32} strokeWidth={4} />
+              </>
+            )}
           </button>
         </div>
       </div>

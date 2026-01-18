@@ -13,7 +13,11 @@ export const PROTECTED_ROUTES_PREFIX = '/dashboard';
 /**
  * Rute publik yang bisa diakses siapa saja (misal: Landing Page).
  */
-export const PUBLIC_ROUTES = ['/'];
+export const PUBLIC_ROUTES = [
+  '/menu/public',
+  '/menu/checkout',
+  '/order-status', // Kita pakai startsWith nanti untuk menangani ID dinamis
+];
 
 /**
  * Redirect default setelah login sukses.

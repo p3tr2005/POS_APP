@@ -1,9 +1,16 @@
 import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { AUTH_ROUTES, DEFAULT_LOGIN_REDIRECT, PROTECTED_ROUTES_PREFIX } from '@/utils/constants';
+import {
+  AUTH_ROUTES,
+  DEFAULT_LOGIN_REDIRECT,
+  PROTECTED_ROUTES_PREFIX,
+  PUBLIC_ROUTES,
+} from '@/utils/constants';
 
 import { auth } from './auth';
+
+// 1. Definisikan rute yang boleh diakses semua orang tanpa login
 
 export async function proxy(request: NextRequest) {
   const sessionCookie = await auth.api.getSession({
@@ -15,12 +22,22 @@ export async function proxy(request: NextRequest) {
   const isAuthRoute = AUTH_ROUTES.includes(pathname);
   const isProtectedRoute = pathname.startsWith(PROTECTED_ROUTES_PREFIX);
 
-  // 1. Jika mencoba akses rute terproteksi tapi tidak punya session
+  // Cek apakah rute saat ini adalah rute publik
+  const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
+
+  // --- LOGIC MIDDLEWARE ---
+
+  // 1. Jika rute publik, biarkan lewat (Next)
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
+
+  // 2. Jika mencoba akses rute terproteksi tapi tidak punya session
   if (isProtectedRoute && !sessionCookie) {
     return NextResponse.redirect(new URL('/auth/sign-in', request.url));
   }
 
-  // 2. Jika mencoba akses rute auth (login/register) tapi sudah punya session
+  // 3. Jika mencoba akses rute auth (login/register) tapi sudah punya session
   if (isAuthRoute && sessionCookie) {
     return NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, request.url));
   }
@@ -29,8 +46,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    // Jalankan middleware untuk semua rute kecuali file statis dan api
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };

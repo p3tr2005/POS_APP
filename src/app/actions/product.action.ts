@@ -47,6 +47,7 @@ export async function updateProductAction(id: string, prevState: any, formData: 
   const title = formData.get('title') as string;
   const price = parseInt(formData.get('price') as string);
   const image = formData.get('image') as string;
+  const category = formData.get('category') as string;
 
   try {
     await db
@@ -55,6 +56,7 @@ export async function updateProductAction(id: string, prevState: any, formData: 
         title: title.toUpperCase(),
         price,
         image,
+        category,
       })
       .where(eq(productModel.id, id));
 

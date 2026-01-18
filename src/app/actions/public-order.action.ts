@@ -8,38 +8,48 @@ import { orderItems, orders } from '@/database/models/product.model';
 import { eq } from 'drizzle-orm';
 
 export async function createPublicOrderAction(cart: any[]) {
-  if (cart.length === 0) return { error: 'EMPTY_CART' };
+  if (!cart || cart.length === 0) return { error: 'EMPTY_CART' };
 
   const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
 
   try {
-    // 1. Simpan Order dengan status PENDING
-    const [newOrder] = await db
-      .insert(orders)
-      .values({
-        userId: 'CUSTOMER_SELF_SERVICE', // Penanda order dari luar
-        totalPrice: total,
-        status: 'PENDING',
-      })
-      .$returningId();
+    // Menggunakan TRANSACTION agar jika salah satu gagal, semua dibatalkan (Data Integrity)
+    return await db.transaction(async (tx) => {
+      // 1. Simpan Order Utama
+      const [newOrder] = await tx
+        .insert(orders)
+        .values({
+          userId: 'CUSTOMER_SELF_SERVICE',
+          totalPrice: total,
+          status: 'PENDING',
+          // Tambahkan kolom 'type' jika ada di schema kamu (misal: TAKEAWAY)
+        })
+        .$returningId();
 
-    // 2. Simpan Detail Item
-    const items = cart.map((item) => ({
-      orderId: newOrder.id,
-      productId: item.id,
-      productTitle: item.title,
-      quantity: item.qty,
-      priceAtPointOfSale: item.price,
-    }));
+      // 2. Siapkan Detail Item termasuk Modifiers dan Notes
+      const items = cart.map((item) => ({
+        orderId: newOrder.id,
+        productId: item.id,
+        productTitle: item.title,
+        quantity: item.qty,
+        priceAtPointOfSale: item.price,
+        // PASTIKAN kolom ini ada di schema orderItems kamu:
+        modifiers: item.modifiers || [], // Menyimpan array ["Less Ice", "Normal Sugar"]
+        notes: item.notes || '', // Menyimpan catatan "Jangan pakai sedotan"
+      }));
 
-    await db.insert(orderItems).values(items);
+      // 3. Simpan semua item sekaligus
+      await tx.insert(orderItems).values(items);
 
-    // Trigger revalidate agar dashboard kasir tahu ada data baru
-    revalidatePath('/dashboard');
+      // 4. Revalidate cache agar dashboard kasir & kitchen terupdate
+      revalidatePath('/dashboard');
+      revalidatePath('/dashboard/pos');
 
-    return { success: true, orderId: newOrder.id };
+      return { success: true, orderId: newOrder.id };
+    });
   } catch (e) {
-    return { error: 'ORDER_FAILED' };
+    console.error('CREATE_ORDER_ERROR:', e);
+    return { error: 'ORDER_FAILED_TO_SAVE' };
   }
 }
 

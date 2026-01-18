@@ -1,135 +1,136 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { createPublicOrderAction } from '@/app/actions/public-order.action';
-import { ArrowRight, Plus, ShoppingBag, X, Zap } from 'lucide-react';
+import ModifierModal from '@/app/(dashboard)/dashboard/pos/modifier-modal';
+import { Dialog } from '@/ui/components/dialog';
+import { useCartStore } from '@/ui/hooks/useCartStore';
+import { ArrowRight, Plus, Search, ShoppingBag, UtensilsCrossed } from 'lucide-react';
 
-export default function PublicMenuClient({ products }: { products: any[] }) {
-  const [cart, setCart] = useState<any[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
+export default function MenuClient({ products }: { products: any[] }) {
   const router = useRouter();
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [search, setSearch] = useState('');
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  // Ambil state dari Zustand
+  const { cart, addToCart } = useCartStore();
+
   const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
 
-  const handleConfirmOrder = () => {
-    startTransition(async () => {
-      const res = await createPublicOrderAction(cart);
-      if (res.success && res.orderId) {
-        setCart([]);
-        setIsCartOpen(false);
-        router.push(`/order-status/${res.orderId}`);
-      }
-    });
-  };
+  const filteredProducts = (products || []).filter((p) =>
+    p.title.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="mx-auto min-h-screen max-w-md border-x-[6px] border-black bg-white pb-32">
-      {/* ADIDAS STYLE HEADER */}
-      <header className="sticky top-0 z-40 border-b-[6px] border-black bg-white p-8">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-6xl leading-[0.8] font-black tracking-tighter uppercase italic">
-              The
-              <br />
-              Menu
-            </h1>
-            <p className="mt-4 text-[10px] font-black tracking-[0.3em] uppercase opacity-40">
-              Freshly_Served_Daily
-            </p>
-          </div>
-          <Zap size={40} fill="black" strokeWidth={0} />
-        </div>
-      </header>
-
-      {/* PRODUCT LIST */}
-      <div className="space-y-10 p-6">
-        {products.map((item) => (
-          <div key={item.id} className="group flex items-center justify-between">
-            <div className="flex-1">
-              <h3 className="mb-2 text-3xl leading-none font-black tracking-tighter uppercase italic transition-transform group-active:translate-x-2">
-                {item.title}
-              </h3>
-              <p className="text-lg font-black italic opacity-60">
-                IDR {Number(item.price).toLocaleString()}
-              </p>
+    <div className="min-h-screen bg-[#FFFBEB] pb-40 text-black">
+      {/* NAVBAR */}
+      <nav className="sticky top-0 z-50 border-b-[6px] border-black bg-white p-6 shadow-[0_6px_0_0_rgba(0,0,0,1)]">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 md:flex-row">
+          <div className="flex items-center gap-3">
+            <div className="border-2 border-black bg-black p-2 text-white">
+              <UtensilsCrossed size={24} />
             </div>
-            <button
-              onClick={() => {
-                const existing = cart.find((c) => c.id === item.id);
-                if (existing) {
-                  setCart(cart.map((c) => (c.id === item.id ? { ...c, qty: c.qty + 1 } : c)));
-                } else {
-                  setCart([...cart, { ...item, qty: 1 }]);
-                }
-              }}
-              className="flex h-14 w-14 items-center justify-center bg-black text-white shadow-[6px_6px_0px_0px_rgba(0,0,0,0.1)] transition-all active:scale-90"
-            >
-              <Plus size={28} strokeWidth={3} />
-            </button>
+            <h1 className="text-3xl font-[1000] tracking-tighter uppercase italic">BOBA_GACOR</h1>
+          </div>
+          <div className="relative w-full md:w-96">
+            <input
+              type="text"
+              placeholder="CARI MENU..."
+              className="w-full border-4 border-black p-3 pl-12 text-sm font-black uppercase outline-none focus:bg-yellow-50"
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Search className="absolute top-1/2 left-4 -translate-y-1/2 opacity-40" size={20} />
+          </div>
+        </div>
+      </nav>
+
+      {/* MODAL */}
+      <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
+        {selectedProduct && (
+          <ModifierModal
+            product={selectedProduct}
+            onConfirm={(data: any) => {
+              addToCart(selectedProduct, data);
+              setSelectedProduct(null);
+            }}
+          />
+        )}
+      </Dialog>
+
+      {/* GRID MENU */}
+      <main className="mx-auto mt-10 grid max-w-7xl grid-cols-1 gap-10 p-6 md:grid-cols-3">
+        {filteredProducts.map((product) => (
+          <div
+            key={product.id}
+            className="border-[6px] border-black bg-white shadow-[12px_12px_0_0_rgba(0,0,0,1)] transition-all hover:-translate-y-2"
+          >
+            <div className="flex h-56 items-center justify-center border-b-[6px] border-black bg-zinc-100">
+              <ShoppingBag size={60} className="opacity-10" />
+            </div>
+            <div className="p-6">
+              <h4 className="mb-6 text-3xl font-[1000] tracking-tighter uppercase italic">
+                {product.title}
+              </h4>
+              <div className="flex items-end justify-between">
+                <p className="text-3xl leading-none font-[1000] italic">
+                  IDR {Number(product.price).toLocaleString()}
+                </p>
+                <button
+                  onClick={() => setSelectedProduct(product)}
+                  className="border-[4px] border-black bg-yellow-400 p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition-all active:shadow-none"
+                >
+                  <Plus size={28} strokeWidth={4} />
+                </button>
+              </div>
+            </div>
           </div>
         ))}
-      </div>
+      </main>
 
       {/* FLOATING CART BUTTON */}
-      {totalItems > 0 && (
-        <div className="fixed right-0 bottom-0 left-0 z-50 p-6">
+      <div
+        className={`fixed right-0 bottom-8 left-0 z-50 transform px-6 transition-all duration-500 ${
+          totalItems > 0 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'
+        }`}
+      >
+        <div className="mx-auto max-w-2xl">
           <button
-            onClick={() => setIsCartOpen(true)}
-            className="mx-auto flex w-full max-w-md items-center justify-between bg-black p-6 text-white shadow-[10px_10px_0px_0px_rgba(0,0,0,0.2)]"
+            onClick={() => router.push('/menu/checkout')}
+            className="flex w-full items-center justify-between border-[6px] border-white bg-black p-6 text-white shadow-[0_0_0_6px_rgba(0,0,0,1)] transition-all hover:bg-zinc-900"
           >
-            <span className="flex items-center gap-3 font-black tracking-widest italic">
-              <ShoppingBag size={20} /> BAG ({totalItems})
-            </span>
-            <span className="text-xl font-black italic underline decoration-2 underline-offset-4">
-              IDR {total.toLocaleString()}
-            </span>
+            <div className="flex items-center gap-5 text-left">
+              <div className="relative">
+                <ShoppingBag size={32} strokeWidth={3} />
+                <span className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-black bg-yellow-400 text-xs font-[1000] text-black">
+                  {totalItems}
+                </span>
+              </div>
+              <div>
+                <p className="mb-1 text-[10px] leading-none font-black tracking-widest text-zinc-500 uppercase">
+                  Total_Items
+                </p>
+                <p className="text-xl leading-none font-black tracking-tighter uppercase italic">
+                  LIHAT_PESANAN
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <p className="mb-1 text-[10px] leading-none font-black tracking-widest text-zinc-500 uppercase">
+                  Subtotal
+                </p>
+                <p className="text-3xl font-[1000] tracking-tighter italic">
+                  IDR {totalPrice.toLocaleString()}
+                </p>
+              </div>
+              <ArrowRight size={32} strokeWidth={4} className="text-yellow-400" />
+            </div>
           </button>
         </div>
-      )}
-
-      {/* CART DRAWER */}
-      {isCartOpen && (
-        <div className="animate-in slide-in-from-bottom fixed inset-0 z-[60] flex flex-col bg-white p-8 duration-300">
-          <div className="mb-12 flex justify-between">
-            <h2 className="text-5xl leading-none font-black tracking-tighter uppercase italic">
-              Your_Bag
-            </h2>
-            <button onClick={() => setIsCartOpen(false)} className="border-4 border-black p-2">
-              <X size={24} strokeWidth={3} />
-            </button>
-          </div>
-
-          <div className="flex-1 space-y-6 overflow-y-auto">
-            {cart.map((item) => (
-              <div key={item.id} className="flex justify-between border-b-2 border-black pb-4">
-                <div className="text-xl leading-none font-black uppercase italic">{item.title}</div>
-                <div className="text-xl font-black italic">x{item.qty}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="border-t-[8px] border-black pt-8">
-            <div className="mb-8 flex items-end justify-between">
-              <span className="text-xs font-black tracking-[0.3em] opacity-40">TOTAL_PAYABLE</span>
-              <span className="text-5xl font-black tracking-tighter italic">
-                IDR {total.toLocaleString()}
-              </span>
-            </div>
-            <button
-              disabled={isPending}
-              onClick={handleConfirmOrder}
-              className="flex w-full items-center justify-center gap-4 bg-black py-8 text-2xl font-black tracking-[0.2em] text-white uppercase italic active:bg-zinc-800 disabled:bg-zinc-400"
-            >
-              {isPending ? 'SENDING...' : 'Confirm Order'} <ArrowRight strokeWidth={3} />
-            </button>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

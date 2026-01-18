@@ -2,7 +2,6 @@
 import { db } from '@/database';
 import { productModel } from '@/database/models';
 import { desc } from 'drizzle-orm';
-import { Edit2, Trash2 } from 'lucide-react';
 
 import { AddProductDialog } from './add-product-dialog';
 import { DeleteProductButton } from './delete-product-btn';
@@ -12,6 +11,7 @@ export default async function InventoryPage() {
   // 1. Ambil data langsung dari DB (Server Side)
   // Kita urutkan dari yang terbaru (desc)
   const products = await db.select().from(productModel).orderBy(desc(productModel.createdAt));
+  console.log({ products });
 
   return (
     <div className="space-y-12">
